@@ -1,0 +1,97 @@
+setwd("D:/CienciaDados/AnaliseTemperatura")
+getwd()
+
+#INSTALANDO PACOTES
+install.packages("readr")
+install.packages("data.table")
+install.packages("dplyr")
+install.packages("ggplot2")
+
+#CARREGANDO PACOTES
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(data.table)
+
+#PESQUISANDO SOBRE FREAD
+?fread
+
+#CARREGANDO DADOS (MILHOES DE REIGTROS EM SEGUNDOS)
+system.time(df <- fread("TemperaturasGlobais/TemperaturasGlobais.csv",encoding = "UTF-8" ))
+
+#VISUALIZANDO DATA FRAME
+View(df)
+
+#CRIANDO UM SUBCONJUNTO DE DADOS SELECIONANDO APENAS O PAÍS BRASIL
+cidadesBrasil <- subset(df, Country == 'Brazil')
+
+#TRATANDO DADOS NULOS
+cidadesBrasil <- na.omit(cidadesBrasil)
+
+#VISUALIZANDO OS PRIMEIRO REGISTROS
+head(cidadesBrasil)
+
+#TOTAL DE REGISTROS 
+nrow(df)
+nrow(cidadesBrasil)
+
+#OBTENDO QUANTIDAE DE LINHAS E COLUNAS
+dim(cidadesBrasil)
+
+#VISUALIZANDO O DATAFRAME
+View(cidadesBrasil)
+
+#SELECIONANDO AS CIDADES
+listaCidades = distinct(cidadesBrasil, City)
+
+#TRATAMENTO DE DATA, ANO E MÊS
+cidadesBrasil$dt <- as.POSIXct(cidadesBrasil$dt,format='%Y-%m-%d')
+cidadesBrasil$Month <- month(cidadesBrasil$dt)
+cidadesBrasil$Year <- year(cidadesBrasil$dt)
+
+#REMOVENDO COLUNAS
+cidadesBrasil <-  subset( cidadesBrasil, select = -AverageTemperatureUncertainty )
+cidadesBrasil <-  subset( cidadesBrasil, select = -dt )
+cidadesBrasil <-  subset( cidadesBrasil, select = -Country )
+
+#GERANDO TEMPERATURA MÉDIA POR ANO
+library(data.table)
+
+temp_media_cidade_ano= 
+cidadesBrasil%>% 
+  
+group_by(Year, City) %>%                        
+summarise_at(vars(AverageTemperature),
+             list(AverageTemperature = mean))
+
+#SELECIONANDO AS CAPITAIS DO NORDESTE
+temp_media_capitais_nordeste <- subset(temp_media_cidade_ano
+                                         , City == 'Recife' | 
+                                           City == 'Salvador' |
+                                           City == 'Aracaju' |
+                                           City == 'Maceió' |
+                                           City == 'Fortaleza' |
+                                           City == 'São Luis' |
+                                           City == 'João Pessoa' |
+                                           City == 'Teresina' |
+                                           City == 'Natal' |
+                                           City == 'Aracaju' 
+                                           
+                                         )
+View(temp_media_capitais_nordeste)
+
+
+#PLOTANDO GRÁFICO
+p_media_nordeste <- ggplot(temp_media_capitais_nordeste, aes(x = (Year), y = AverageTemperature, color = as.factor(City))) +
+  geom_smooth(se = FALSE,fill = NA, size = 2) +
+  theme_light(base_size = 10) +
+  xlab("Ano")+
+  ylab("Temperatura Média") +
+  scale_color_discrete("") +
+  ggtitle("Temperatura Média ao longo dos anos em Salvador") +
+  theme(plot.title = element_text(size = 12)) +
+  facet_wrap(~City)
+ 
+#EXIBINDO GRAFICO
+p_media_nordeste
